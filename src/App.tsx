@@ -6,25 +6,28 @@ import LoginPage from './pages/LoginPage';
 import GoogleCallbackPage from './pages/GoogleCallbackPage';
 import AppLayout from "./components/layout/AppLayout";
 import FileManagerPage from "./pages/FileManagerPage";
+import {ToastProvider} from "./components/ui/Toast.tsx";
 
 const queryClient = new QueryClient();
 
 export default function App() {
     return (
         <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-                        <Route element={<ProtectedRoute />}>
-                            <Route element={<AppLayout />}>
-                                <Route path="/" element={<FileManagerPage />} />
+            <ToastProvider>
+                <AuthProvider>
+                    <BrowserRouter>
+                        <Routes>
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+                            <Route element={<ProtectedRoute />}>
+                                <Route element={<AppLayout />}>
+                                    <Route path="/" element={<FileManagerPage />} />
+                                </Route>
                             </Route>
-                        </Route>
-                    </Routes>
-                </BrowserRouter>
-            </AuthProvider>
+                        </Routes>
+                    </BrowserRouter>
+                </AuthProvider>
+            </ToastProvider>
         </QueryClientProvider>
     );
 }
