@@ -4,7 +4,8 @@ import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import GoogleCallbackPage from './pages/GoogleCallbackPage';
-import HomePage from './pages/HomePage';
+import AppLayout from "./components/layout/AppLayout";
+import FileManagerPage from "./pages/FileManagerPage";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,9 @@ export default function App() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
                         <Route element={<ProtectedRoute />}>
-                            <Route path="/" element={<HomePage />} />
+                            <Route element={<AppLayout />}>
+                                <Route path="/" element={<FileManagerPage />} />
+                            </Route>
                         </Route>
                     </Routes>
                 </BrowserRouter>
