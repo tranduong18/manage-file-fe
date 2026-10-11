@@ -18,6 +18,7 @@ import Pagination from '../components/ui/Pagination';
 import UploadButton from '../components/upload/UploadButton';
 import UploadQueue from '../components/upload/UploadQueue';
 import type { FileResponse, FolderResponse } from '../types/api';
+import PickerButton from '../components/picker/PickerButton';
 
 const PAGE_SIZE = 20;
 const ROOT: Crumb = { id: null, name: 'Thư mục gốc' };
@@ -139,6 +140,7 @@ export default function FileManagerPage() {
             <div className="flex items-center justify-between gap-2">
                 <Breadcrumb trail={trail} onNavigate={navigateTo} />
                 <div className="flex gap-2">
+                    <PickerButton />
                     <UploadButton onFiles={upload.addFiles} />
                     <button
                         onClick={() => setShowCreate(true)}

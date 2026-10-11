@@ -45,3 +45,19 @@ export interface FolderResponse {
     googleFolderId: string;
     source: 'CREATED' | 'PICKED';
 }
+
+export interface PickerConfigResponse {
+    accessToken: string; // Google access token, sống ~1h, chỉ dùng cho Picker
+    apiKey: string;
+    appId: string;
+    scope: string;
+}
+
+export interface PickedFileRequest {
+    googleFileId: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number | null;
+    parentFolderId: string | null;
+    isFolder: boolean;
+}
