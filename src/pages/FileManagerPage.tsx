@@ -1,13 +1,14 @@
-import { useState, type DragEvent } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import { useFiles, useDeleteFile, useMoveFile, useRenameFile } from '../hooks/useFiles';
 import { useFolders } from '../hooks/useFolders';
 import { useDebounce } from '../hooks/useDebounce';
 import { useUpload } from '../hooks/useUpload';
+import { useBrowseState } from '../hooks/useBrowseState';
 import { downloadFile } from '../api/files';
 import { getApiError } from '../api/client';
 import { saveBlob } from '../utils/download';
 import { useToast } from '../components/ui/Toast';
-import Breadcrumb, { type Crumb } from '../components/folders/Breadcrumb';
+import Breadcrumb from '../components/folders/Breadcrumb';
 import CreateFolderDialog from '../components/folders/CreateFolderDialog';
 import FolderPickerDialog from '../components/folders/FolderPickerDialog';
 import FileFilters from '../components/files/FileFilters';
@@ -17,16 +18,15 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UploadButton from '../components/upload/UploadButton';
 import UploadQueue from '../components/upload/UploadQueue';
-import type { FileResponse, FolderResponse } from '../types/api';
 import PickerButton from '../components/picker/PickerButton';
+import type { FileResponse, FolderResponse } from '../types/api';
 
 const PAGE_SIZE = 20;
-const ROOT: Crumb = { id: null, name: 'Thư mục gốc' };
 
 export default function FileManagerPage() {
     const toast = useToast();
-    const [trail, setTrail] = useState<Crumb[]>([ROOT]);
-    const [page, setPage] = useState(1);
+    const { trail, page, go } = useBrowseState();
+
     const [search, setSearch] = useState('');
     const [mimeType, setMimeType] = useState('');
     const [showCreate, setShowCreate] = useState(false);
@@ -58,13 +58,20 @@ export default function FileManagerPage() {
     const filtering = !!debouncedSearch || !!mimeType;
     const error = filesQuery.error ?? foldersQuery.error;
 
-    const openFolder = (f: FolderResponse) => {
-        setTrail((t) => [...t, { id: f.googleFolderId, name: f.name }]);
-        setPage(1);
-    };
-    const navigateTo = (index: number) => {
-        setTrail((t) => t.slice(0, index + 1));
-        setPage(1);
+    // Đang đứng ở trang > 1 mà trang rỗng (vừa xoá hết file ở trang cuối) -> lùi trang
+    useEffect(() => {
+        const d = filesQuery.data;
+        if (d && !filesQuery.isPlaceholderData && d.content.length === 0 && page > 1) {
+            go(trail, Math.min(page - 1, Math.max(1, d.totalPages)), true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filesQuery.data, filesQuery.isPlaceholderData, page]);
+
+    const openFolder = (f: FolderResponse) =>
+        go([...trail, { id: f.googleFolderId, name: f.name }], 1);
+    const navigateTo = (index: number) => go(trail.slice(0, index + 1), 1);
+    const resetPage = () => {
+        if (page !== 1) go(trail, 1, true);
     };
 
     const handleDownload = async (f: FileResponse) => {
@@ -118,7 +125,6 @@ export default function FileManagerPage() {
         });
     };
 
-    // Kéo thả file vào trang
     const onDrop = (e: DragEvent) => {
         e.preventDefault();
         setDragging(false);
@@ -137,9 +143,9 @@ export default function FileManagerPage() {
             }}
             onDrop={onDrop}
         >
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Breadcrumb trail={trail} onNavigate={navigateTo} />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <PickerButton />
                     <UploadButton onFiles={upload.addFiles} />
                     <button
@@ -156,17 +162,26 @@ export default function FileManagerPage() {
                 mimeType={mimeType}
                 onSearchChange={(v) => {
                     setSearch(v);
-                    setPage(1);
+                    resetPage();
                 }}
                 onMimeTypeChange={(v) => {
                     setMimeType(v);
-                    setPage(1);
+                    resetPage();
                 }}
             />
 
             {error && (
-                <div className="bg-red-50 text-red-700 border border-red-200 rounded p-3 text-sm">
-                    {getApiError(error).message}
+                <div className="flex items-center justify-between bg-red-50 text-red-700 border border-red-200 rounded p-3 text-sm">
+                    <span>{getApiError(error).message}</span>
+                    <button
+                        onClick={() => {
+                            filesQuery.refetch();
+                            foldersQuery.refetch();
+                        }}
+                        className="underline"
+                    >
+                        Thử lại
+                    </button>
                 </div>
             )}
 
@@ -175,6 +190,7 @@ export default function FileManagerPage() {
             ) : (
                 <>
                     <FileTable
+                        filtering={filtering}
                         folders={filtering ? [] : folders}
                         files={filesQuery.data?.content ?? []}
                         hasMoreFolders={!filtering && !!foldersQuery.hasNextPage}
@@ -192,7 +208,7 @@ export default function FileManagerPage() {
                             page={filesQuery.data.currentPage}
                             totalPages={filesQuery.data.totalPages}
                             totalElements={filesQuery.data.totalElements}
-                            onChange={setPage}
+                            onChange={(p) => go(trail, p)}
                         />
                     )}
                 </>

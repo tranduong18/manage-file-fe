@@ -14,7 +14,7 @@ export async function listFiles(params: ListFilesParams): Promise<PageResponse<F
     return res.data;
 }
 
-export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // khớp max-file-size của Spring
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export async function uploadFile(
     file: File,

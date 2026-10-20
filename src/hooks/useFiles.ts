@@ -21,7 +21,10 @@ export function useMoveFile() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (v: { id: string; targetFolderId: string }) => moveFile(v.id, v.targetFolderId),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['files'] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['files'] });
+            qc.invalidateQueries({ queryKey: ['folders'] });
+        }
     });
 }
 
@@ -29,6 +32,9 @@ export function useDeleteFile() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (id: string) => deleteFile(id),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['files'] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['files'] });
+            qc.invalidateQueries({ queryKey: ['storage'] });
+        },
     });
 }

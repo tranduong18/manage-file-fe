@@ -39,7 +39,8 @@ export function useUpload(parentFolderId: string | undefined) {
                 try {
                     await uploadFile(item.file, parentFolderId, (p) => patch(item.id, { progress: p }));
                     patch(item.id, { status: 'done', progress: 100 });
-                    qc.invalidateQueries({ queryKey: ['files'] });
+                    qc.invalidateQueries({ queryKey: ['files']});
+                    qc.invalidateQueries({ queryKey: ['storage']});
                 } catch (e) {
                     patch(item.id, { status: 'error', error: getApiError(e).message });
                 }
