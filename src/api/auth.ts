@@ -32,3 +32,7 @@ export async function loginWithCode(code: string): Promise<LoginResponse> {
     });
     return res.data.data ?? res.data;
 }
+
+export async function logoutApi(): Promise<void> {
+    await api.post('/api/auth/logout');
+}

@@ -23,7 +23,7 @@ let refreshing: Promise<string> | null = null;
 export function refreshAccessToken(): Promise<string> {
     if (!refreshing) {
         refreshing = bare
-            .post('/api/auth/refresh')
+            .post('/api/auth/refresh-token')
             .then((res) => {
                 const token: string = res.data.data?.accessToken ?? res.data.accessToken;
                 localStorage.setItem(TOKEN_KEY, token);
