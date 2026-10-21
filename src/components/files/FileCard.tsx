@@ -13,21 +13,35 @@ const canHaveThumb = (mime: string) =>
 interface Props {
     file: FileResponse;
     downloading: boolean;
+    onPreview: (f: FileResponse) => void;
     onDownload: (f: FileResponse) => void;
     onRename: (f: FileResponse) => void;
     onMove: (f: FileResponse) => void;
     onDelete: (f: FileResponse) => void;
 }
 
-export default function FileCard({ file, downloading, onDownload, onRename, onMove, onDelete }: Props) {
+export default function FileCard({
+                                     file,
+                                     downloading,
+                                     onPreview,
+                                     onDownload,
+                                     onRename,
+                                     onMove,
+                                     onDelete,
+                                 }: Props) {
     const [thumb, setThumb] = useState<string | null | undefined>(file.thumbnailLink);
     const [imgFailed, setImgFailed] = useState(false);
     const [tried, setTried] = useState(false);
 
     const showImg = !!thumb && !imgFailed;
+    const isImage = file.mimeType.startsWith('image/');
 
     const open = () => {
-        if (file.webViewLink) window.open(file.webViewLink, '_blank', 'noopener,noreferrer');
+        if (isImage) {
+            onPreview(file);
+        } else if (file.webViewLink) {
+            window.open(file.webViewLink, '_blank', 'noopener,noreferrer');
+        }
     };
 
     const refresh = async () => {
@@ -65,7 +79,7 @@ export default function FileCard({ file, downloading, onDownload, onRename, onMo
         <div className="group relative rounded-lg border bg-white overflow-hidden hover:shadow-md transition">
             <button
                 onClick={open}
-                disabled={!file.webViewLink}
+                disabled={!isImage && !file.webViewLink}
                 className="block w-full aspect-square bg-gray-100 overflow-hidden"
                 title={file.fileName}
             >

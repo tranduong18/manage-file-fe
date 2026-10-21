@@ -15,6 +15,7 @@ import FileFilters from '../components/files/FileFilters';
 import FileTable from '../components/files/FileTable';
 import FileGrid from '../components/files/FileGrid';
 import RenameDialog from '../components/files/RenameDialog';
+import ImagePreview from '../components/files/ImagePreview';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UploadButton from '../components/upload/UploadButton';
@@ -37,6 +38,7 @@ export default function FileManagerPage() {
     const [moving, setMoving] = useState<FileResponse | null>(null);
     const [deleting, setDeleting] = useState<FileResponse | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [previewId, setPreviewId] = useState<string | null>(null);
 
     const debouncedSearch = useDebounce(search);
     const currentId = trail[trail.length - 1].id ?? undefined;
@@ -72,6 +74,8 @@ export default function FileManagerPage() {
     const deleteMut = useDeleteFile();
 
     const folders = foldersQuery.data?.pages.flatMap((p) => p.content) ?? [];
+    const files = filesQuery.data?.content ?? [];
+    const images = files.filter((f) => f.mimeType.startsWith('image/'));
     const filtering = !!debouncedSearch || !!mimeType;
     const error = filesQuery.error ?? foldersQuery.error;
 
@@ -158,12 +162,13 @@ export default function FileManagerPage() {
     const listProps = {
         filtering,
         folders: filtering ? [] : folders,
-        files: filesQuery.data?.content ?? [],
+        files,
         hasMoreFolders: !filtering && !!foldersQuery.hasNextPage,
         loadingMoreFolders: foldersQuery.isFetchingNextPage,
         downloadingId,
         onLoadMoreFolders: () => foldersQuery.fetchNextPage(),
         onOpenFolder: openFolder,
+        onPreview: (f: FileResponse) => setPreviewId(f.id),
         onDownload: handleDownload,
         onRename: setRenaming,
         onMove: setMoving,
@@ -286,6 +291,17 @@ export default function FileManagerPage() {
                 onConfirm={handleDelete}
                 onClose={() => setDeleting(null)}
             />
+
+            {previewId && (
+                <ImagePreview
+                    images={images}
+                    currentId={previewId}
+                    downloading={downloadingId === previewId}
+                    onNavigate={setPreviewId}
+                    onDownload={handleDownload}
+                    onClose={() => setPreviewId(null)}
+                />
+            )}
 
             <UploadQueue items={upload.items} onClear={upload.clearFinished} />
         </div>

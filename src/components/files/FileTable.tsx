@@ -11,6 +11,7 @@ interface Props {
     downloadingId: string | null;
     onLoadMoreFolders: () => void;
     onOpenFolder: (f: FolderResponse) => void;
+    onPreview: (f: FileResponse) => void;
     onDownload: (f: FileResponse) => void;
     onRename: (f: FileResponse) => void;
     onMove: (f: FileResponse) => void;
@@ -28,6 +29,7 @@ export default function FileTable({
                                       downloadingId,
                                       onLoadMoreFolders,
                                       onOpenFolder,
+                                      onPreview,
                                       onDownload,
                                       onRename,
                                       onMove,
@@ -99,7 +101,14 @@ export default function FileTable({
                         <td className="px-4 py-2">
                             <div className="flex items-center gap-2">
                                 <span>{mimeIcon(f.mimeType)}</span>
-                                {f.webViewLink ? (
+                                {f.mimeType.startsWith('image/') ? (
+                                    <button
+                                        onClick={() => onPreview(f)}
+                                        className="hover:underline text-left"
+                                    >
+                                        {f.fileName}
+                                    </button>
+                                ) : f.webViewLink ? (
                                     <a
                                         href={f.webViewLink}
                                         target="_blank"

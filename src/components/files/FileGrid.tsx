@@ -10,6 +10,7 @@ interface Props {
     loadingMoreFolders: boolean;
     onLoadMoreFolders: () => void;
     onOpenFolder: (f: FolderResponse) => void;
+    onPreview: (f: FileResponse) => void;
     onDownload: (f: FileResponse) => void;
     onRename: (f: FileResponse) => void;
     onMove: (f: FileResponse) => void;
@@ -62,6 +63,7 @@ export default function FileGrid(p: Props) {
                         key={f.id}
                         file={f}
                         downloading={p.downloadingId === f.id}
+                        onPreview={p.onPreview}
                         onDownload={p.onDownload}
                         onRename={p.onRename}
                         onMove={p.onMove}
