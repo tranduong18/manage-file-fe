@@ -33,6 +33,11 @@ export async function uploadFile(
     return res.data.data;
 }
 
+export async function refreshThumbnail(id: string): Promise<FileResponse>{
+    const res = await api.post<ApiResponse<FileResponse>>(`/api/drives/files/${id}/refresh-thumbnail`);
+    return res.data.data;
+}
+
 export async function downloadFile(id: string): Promise<Blob> {
     const res = await api.get(`/api/drives/files/${id}/download`, { responseType: 'blob' });
     return res.data;

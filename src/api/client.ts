@@ -1,18 +1,40 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ErrorResponse } from '../types/api';
 import { messageForCode } from '../utils/errors';
 
 export const TOKEN_KEY = 'jwt';
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 
-export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
-});
+// withCredentials: để trình duyệt gửi/nhận cookie refresh_token
+export const api = axios.create({ baseURL, withCredentials: true });
+
+// Instance trần (không interceptor) cho request refresh, tránh lặp vô hạn
+const bare = axios.create({ baseURL, withCredentials: true });
 
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
+
+// Nhiều request cùng 401 thì chỉ gọi refresh 1 lần, dùng chung 1 promise
+let refreshing: Promise<string> | null = null;
+
+export function refreshAccessToken(): Promise<string> {
+    if (!refreshing) {
+        refreshing = bare
+            .post('/api/auth/refresh')
+            .then((res) => {
+                const token: string = res.data.data?.accessToken ?? res.data.accessToken;
+                localStorage.setItem(TOKEN_KEY, token);
+                return token;
+            })
+            .finally(() => {
+                refreshing = null;
+            });
+    }
+    return refreshing;
+}
 
 // Lỗi download (responseType: 'blob') trả JSON bên trong Blob -> đọc ra
 async function readErrorBody(err: AxiosError): Promise<ErrorResponse | undefined> {
@@ -23,24 +45,46 @@ async function readErrorBody(err: AxiosError): Promise<ErrorResponse | undefined
     return data as ErrorResponse | undefined;
 }
 
+function redirectToLogin(reason: 'expired' | 'google') {
+    localStorage.removeItem(TOKEN_KEY);
+    if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = `/login?reason=${reason}`;
+    }
+}
+
+type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
 api.interceptors.response.use(
     (res) => res,
     async (err: AxiosError) => {
         const body = await readErrorBody(err);
+        (err as AxiosError & { apiError?: ErrorResponse }).apiError = body;
+
+        const original = err.config as RetryConfig | undefined;
         const errorCode = body?.error;
+        // Không xử lý khi chính API login/refresh/logout bị 401
+        const isAuthCall = original?.url?.includes('/api/auth/');
 
-        // Không redirect khi chính API login bị 401, để trang callback hiện đúng lỗi
-        const isAuthCall = err.config?.url?.includes('/api/auth/');
-
-        if (err.response?.status === 401 && !isAuthCall) {
-            localStorage.removeItem(TOKEN_KEY);
-            const reason = errorCode === 'GOOGLE_REAUTH_REQUIRED' ? 'google' : 'expired';
-            if (!window.location.pathname.startsWith('/login')) {
-                window.location.href = `/login?reason=${reason}`;
+        if (err.response?.status === 401 && original && !isAuthCall) {
+            // Mất quyền Google: refresh JWT không giúp được, phải login lại
+            if (errorCode === 'GOOGLE_REAUTH_REQUIRED') {
+                redirectToLogin('google');
+                return Promise.reject(err);
             }
+
+            if (!original._retry) {
+                original._retry = true;
+                try {
+                    const token = await refreshAccessToken();
+                    original.headers.Authorization = `Bearer ${token}`;
+                    return api(original);
+                } catch {
+                    // refresh thất bại: rơi xuống redirect bên dưới
+                }
+            }
+            redirectToLogin('expired');
         }
 
-        (err as AxiosError & { apiError?: ErrorResponse }).apiError = body;
         return Promise.reject(err);
     }
 );

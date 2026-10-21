@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPickerConfig, savePicked } from '../api/picker';
 import { getApiError } from '../api/client';
@@ -31,13 +31,17 @@ function loadPickerLib(): Promise<void> {
     return pickerLibPromise;
 }
 
-export function useGooglePicker() {
+export function useGooglePicker(targetFolderId?: string) {
     const qc = useQueryClient();
     const toast = useToast();
     const [loading, setLoading] = useState(false);
 
+    // Luôn giữ thư mục hiện tại trong app, tránh closure cũ
+    const targetRef = useRef<string | undefined>(targetFolderId);
+    targetRef.current = targetFolderId;
+
     const handlePicked = useCallback(
-        async (docs: any[]) => {
+        async (docs: any[], parentFolderId: string | null) => {
             let ok = 0;
             let failed = 0;
             let lastError = '';
@@ -51,7 +55,7 @@ export function useGooglePicker() {
                         fileName: doc.name,
                         mimeType: doc.mimeType,
                         sizeBytes: doc.sizeBytes ?? null,
-                        parentFolderId: doc.parentId ?? null,
+                        parentFolderId, // thư mục đang đứng trong app (null ở gốc)
                         isFolder,
                         folder: isFolder,
                     });
@@ -92,7 +96,10 @@ export function useGooglePicker() {
                 .setTitle('Chọn file hoặc folder từ Google Drive')
                 .setCallback((data: any) => {
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                        handlePicked(data[google.picker.Response.DOCUMENTS] ?? []);
+                        handlePicked(
+                            data[google.picker.Response.DOCUMENTS] ?? [],
+                            targetRef.current ?? null // <-- sửa: truyền thư mục hiện tại
+                        );
                     }
                 })
                 .build();

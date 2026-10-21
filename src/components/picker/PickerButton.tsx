@@ -1,7 +1,7 @@
 import { useGooglePicker } from '../../hooks/useGooglePicker';
 
-export default function PickerButton() {
-    const { openPicker, loading } = useGooglePicker();
+export default function PickerButton({ targetFolderId }: { targetFolderId?: string }) {
+    const { openPicker, loading } = useGooglePicker(targetFolderId);
     return (
         <button
             onClick={openPicker}

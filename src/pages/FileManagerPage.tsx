@@ -13,6 +13,7 @@ import CreateFolderDialog from '../components/folders/CreateFolderDialog';
 import FolderPickerDialog from '../components/folders/FolderPickerDialog';
 import FileFilters from '../components/files/FileFilters';
 import FileTable from '../components/files/FileTable';
+import FileGrid from '../components/files/FileGrid';
 import RenameDialog from '../components/files/RenameDialog';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
@@ -39,6 +40,22 @@ export default function FileManagerPage() {
 
     const debouncedSearch = useDebounce(search);
     const currentId = trail[trail.length - 1].id ?? undefined;
+
+    const [view, setView] = useState<'grid' | 'list'>(() => {
+        try {
+            return localStorage.getItem('view') === 'list' ? 'list' : 'grid';
+        } catch {
+            return 'grid';
+        }
+    });
+    const changeView = (v: 'grid' | 'list') => {
+        setView(v);
+        try {
+            localStorage.setItem('view', v);
+        } catch {
+            /* bỏ qua */
+        }
+    };
 
     const filesQuery = useFiles({
         parentFolderId: currentId,
@@ -114,11 +131,18 @@ export default function FileManagerPage() {
         );
     };
 
+    const isPickedDeleting = deleting?.source === 'PICKED';
+
     const handleDelete = () => {
         if (!deleting) return;
+        const wasPicked = deleting.source === 'PICKED';
         deleteMut.mutate(deleting.id, {
             onSuccess: () => {
-                toast.push('Đã chuyển vào Thùng rác của Drive');
+                toast.push(
+                    wasPicked
+                        ? 'Đã gỡ khỏi app (file vẫn còn trong Drive)'
+                        : 'Đã chuyển vào Thùng rác của Drive'
+                );
                 setDeleting(null);
             },
             onError: (e) => toast.push(getApiError(e).message, 'error'),
@@ -129,6 +153,21 @@ export default function FileManagerPage() {
         e.preventDefault();
         setDragging(false);
         if (e.dataTransfer.files.length) upload.addFiles(Array.from(e.dataTransfer.files));
+    };
+
+    const listProps = {
+        filtering,
+        folders: filtering ? [] : folders,
+        files: filesQuery.data?.content ?? [],
+        hasMoreFolders: !filtering && !!foldersQuery.hasNextPage,
+        loadingMoreFolders: foldersQuery.isFetchingNextPage,
+        downloadingId,
+        onLoadMoreFolders: () => foldersQuery.fetchNextPage(),
+        onOpenFolder: openFolder,
+        onDownload: handleDownload,
+        onRename: setRenaming,
+        onMove: setMoving,
+        onDelete: setDeleting,
     };
 
     return (
@@ -146,7 +185,23 @@ export default function FileManagerPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Breadcrumb trail={trail} onNavigate={navigateTo} />
                 <div className="flex flex-wrap gap-2">
-                    <PickerButton />
+                    <PickerButton targetFolderId={currentId} />
+                    <div className="flex rounded border overflow-hidden text-sm">
+                        <button
+                            title="Dạng lưới"
+                            onClick={() => changeView('grid')}
+                            className={`px-2 py-1.5 ${view === 'grid' ? 'bg-blue-50 text-blue-700' : 'bg-white'}`}
+                        >
+                            ▦
+                        </button>
+                        <button
+                            title="Dạng danh sách"
+                            onClick={() => changeView('list')}
+                            className={`px-2 py-1.5 ${view === 'list' ? 'bg-blue-50 text-blue-700' : 'bg-white'}`}
+                        >
+                            ☰
+                        </button>
+                    </div>
                     <UploadButton onFiles={upload.addFiles} />
                     <button
                         onClick={() => setShowCreate(true)}
@@ -189,20 +244,7 @@ export default function FileManagerPage() {
                 <div className="p-10 text-center text-gray-500">Đang tải...</div>
             ) : (
                 <>
-                    <FileTable
-                        filtering={filtering}
-                        folders={filtering ? [] : folders}
-                        files={filesQuery.data?.content ?? []}
-                        hasMoreFolders={!filtering && !!foldersQuery.hasNextPage}
-                        loadingMoreFolders={foldersQuery.isFetchingNextPage}
-                        downloadingId={downloadingId}
-                        onLoadMoreFolders={() => foldersQuery.fetchNextPage()}
-                        onOpenFolder={openFolder}
-                        onDownload={handleDownload}
-                        onRename={setRenaming}
-                        onMove={setMoving}
-                        onDelete={setDeleting}
-                    />
+                    {view === 'list' ? <FileTable {...listProps} /> : <FileGrid {...listProps} />}
                     {filesQuery.data && (
                         <Pagination
                             page={filesQuery.data.currentPage}
@@ -233,9 +275,13 @@ export default function FileManagerPage() {
 
             <ConfirmDialog
                 open={!!deleting}
-                title="Xoá file"
-                message={`Chuyển "${deleting?.fileName}" vào Thùng rác của Google Drive?`}
-                confirmText="Xoá"
+                title={isPickedDeleting ? 'Gỡ file khỏi app' : 'Xoá file'}
+                message={
+                    isPickedDeleting
+                        ? `Gỡ "${deleting?.fileName}" khỏi app? File vẫn còn nguyên trong Google Drive của bạn.`
+                        : `Chuyển "${deleting?.fileName}" vào Thùng rác của Google Drive?`
+                }
+                confirmText={isPickedDeleting ? 'Gỡ' : 'Xoá'}
                 loading={deleteMut.isPending}
                 onConfirm={handleDelete}
                 onClose={() => setDeleting(null)}

@@ -22,6 +22,7 @@ export interface ErrorResponse {
 
 export interface LoginResponse {
     accessToken: string;
+    refreshToken: string;
     tokenType: string;
 }
 
