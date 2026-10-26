@@ -9,6 +9,7 @@ import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import GoogleCallbackPage from './pages/GoogleCallbackPage';
 import FileManagerPage from './pages/FileManagerPage';
+import PrivacyPage from "./pages/PrivacyPage.tsx";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -33,6 +34,7 @@ export default function App() {
                         <BrowserRouter>
                             <Routes>
                                 <Route path="/login" element={<LoginPage />} />
+                                <Route path="/privacy" element={<PrivacyPage />} />
                                 <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
                                 <Route element={<ProtectedRoute />}>
                                     <Route element={<AppLayout />}>
