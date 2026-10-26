@@ -57,7 +57,6 @@ export function useGooglePicker(targetFolderId?: string) {
                         sizeBytes: doc.sizeBytes ?? null,
                         parentFolderId, // thư mục đang đứng trong app (null ở gốc)
                         isFolder,
-                        folder: isFolder,
                     });
                     ok++;
                 } catch (e) {
